@@ -1,0 +1,20 @@
+import {writeFile} from 'node:fs/promises';
+const mainId=process.env.MAIN_SHEET_ID,peopleId=process.env.PEOPLE_SHEET_ID;
+if(!mainId||!peopleId)throw new Error('Sheet IDs are not configured');
+const get=async(id,gid)=>{const u='https://docs.google.com/spreadsheets/d/'+id+'/gviz/tq?tqx=out:html&gid='+gid;const r=await fetch(u);if(!r.ok)throw new Error('Google Sheets '+r.status);return r.text()};
+const decode=s=>s.replace(/<[^>]+>/g,'').replace(/&nbsp;|&#160;/g,' ').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;/g,"'").trim();
+const table=h=>[...h.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)].map(r=>[...r[1].matchAll(/<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi)].map(c=>decode(c[1])));
+const num=s=>{if(s==null||s==='')return null;const n=Number(String(s).replace(/[%\s ]/g,'').replace(',','.'));return Number.isFinite(n)?n:null};
+const main=table(await get(mainId,'1251070794'));
+const row=label=>{const r=main.find(x=>(x[0]||'').trim()===label);if(!r)throw new Error('Missing metric '+label);return r};
+const head=row('Численность');let count=0;for(let m=0;m<12;m++){if(num(head[2+m*3])!=null)count=m+1}if(!count)throw new Error('No current-year data');
+const pair=(label,scale=1)=>{const r=row(label),a=[],b=[];for(let m=0;m<count;m++){a.push(num(r[1+m*3])==null?null:num(r[1+m*3])/scale);b.push(num(r[2+m*3])==null?null:num(r[2+m*3])/scale)}return[a,b]};
+const metrics={hc:pair('Численность'),hi:pair('Принятые'),ex:pair('Уволенные'),tu:pair('% текучки'),pay:pair('Общая сумма ФОТ',1e6),rev:pair('Выручка',1e6),cost:pair('Стоимость найма (на 1 чел)'),sal:pair('Средняя ЗП')};
+const pr=table(await get(peopleId,'251230291')).slice(1).filter(r=>r[3]&&r[6]&&r[8]);
+const ref=new Date();const ages=[],cats={},ten={'0–1 год':0,'1–3 года':0,'3–5 лет':0,'5–8 лет':0,'8–10 лет':0,'10+ лет':0};let male=0,female=0;
+const normalize=x=>{const k=(x||'Не указано').trim().toLowerCase();const map={'основные рабочие':'Основные рабочие','вспомогательный персонал':'Вспомогательные','рсс':'РСС','производственный персонал':'Производственные','коммерция':'Коммерция','декрет':'Декрет','rnd':'RnD','не указано':'Не указано'};return map[k]||x.trim()};
+for(const r of pr){const g=r[6].toLowerCase();if(g==='м')male++;else if(g==='ж')female++;const c=normalize(r[2]);cats[c]=(cats[c]||0)+1;const dm=r[8].match(/^(\d{2})\.(\d{2})\.(\d{4})$/);if(dm){let a=ref.getFullYear()-Number(dm[3]);const mo=Number(dm[2])-1,da=Number(dm[1]);if(ref.getMonth()<mo||(ref.getMonth()===mo&&ref.getDate()<da))a--;if(a>=14&&a<=90)ages.push(a)}const y=num(r[11]);if(y!=null&&y>=0&&y<=60){if(y<1)ten['0–1 год']++;else if(y<3)ten['1–3 года']++;else if(y<5)ten['3–5 лет']++;else if(y<8)ten['5–8 лет']++;else if(y<10)ten['8–10 лет']++;else ten['10+ лет']++}}
+ages.sort((a,b)=>a-b);const ab={'до 25':0,'25–34':0,'35–44':0,'45–54':0,'55+':0};for(const a of ages){if(a<25)ab['до 25']++;else if(a<35)ab['25–34']++;else if(a<45)ab['35–44']++;else if(a<55)ab['45–54']++;else ab['55+']++}
+const sorted=o=>Object.entries(o).sort((a,b)=>b[1]-a[1]);const people={count:pr.length,male,female,ageCount:ages.length,avgAge:ages.reduce((s,x)=>s+x,0)/ages.length,medianAge:ages[Math.floor(ages.length/2)],ageBands:Object.entries(ab),categories:sorted(cats),tenure:Object.entries(ten)};
+await writeFile('data.js','window.HR_DATA='+JSON.stringify({updatedAt:new Date().toISOString(),metrics,people})+';\n','utf8');
+console.log('Updated aggregate data for',pr.length,'employees and',count,'months');
