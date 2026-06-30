@@ -104,7 +104,10 @@ for(const person of peopleRows){
   else if(gender==='ж') female++;
   const category=normalize(person[2]);
   categories[category]=(categories[category]||0)+1;
-  const contract=(person[12]||'Не указано').trim();
+  const contractRaw=(person[12]||'Не указано').trim();
+  const contractKey=contractRaw.toLowerCase();
+  const contractMap={'тд':'ТД','ип':'ИП','ка':'КА','б/д':'Б/Д','сезон':'Сезон','не указано':'Не указано'};
+  const contract=contractMap[contractKey]||contractRaw;
   contracts[contract]=(contracts[contract]||0)+1;
   const birth=(person[8]||'').match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
   if(birth){
