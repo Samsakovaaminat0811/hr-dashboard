@@ -86,10 +86,11 @@ const labels=['ОПР, чел','Вспомогательный, чел','ППР,
 const distribution=labels.map(label=>({label:label.replace(', чел',''),values:sectionPair('Распределение персонала',label)}));
 const payrollDistribution=labels.map(label=>({label:label.replace(', чел',''),values:sectionPair('ФОТ распределению персонала',label,1e6)}));
 
-const peopleRows=table(await get(peopleId,'251230291')).slice(1).filter(item=>item[3]&&item[6]&&item[8]);
+const peopleRows=table(await get(peopleId,'251230291')).slice(1).filter(item=>item[3]);
 const referenceDate=new Date();
 const ages=[];
 const categories={};
+const contracts={};
 const tenure={'0–1 год':0,'1–3 года':0,'3–5 лет':0,'5–8 лет':0,'8–10 лет':0,'10+ лет':0};
 let male=0,female=0,tenureCount=0;
 const normalize=value=>{
@@ -98,12 +99,14 @@ const normalize=value=>{
   return map[key]||value.trim();
 };
 for(const person of peopleRows){
-  const gender=person[6].toLowerCase();
+  const gender=(person[6]||'').toLowerCase();
   if(gender==='м') male++;
   else if(gender==='ж') female++;
   const category=normalize(person[2]);
   categories[category]=(categories[category]||0)+1;
-  const birth=person[8].match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+  const contract=(person[12]||'Не указано').trim();
+  contracts[contract]=(contracts[contract]||0)+1;
+  const birth=(person[8]||'').match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
   if(birth){
     let age=referenceDate.getFullYear()-Number(birth[3]);
     const month=Number(birth[2])-1;
@@ -142,6 +145,7 @@ const people={
   medianAge:ages.length?ages[Math.floor(ages.length/2)]:0,
   ageBands:Object.entries(ageBands),
   categories:sorted(categories),
+  contractTypes:sorted(contracts),
   tenure:Object.entries(tenure)
 };
 
