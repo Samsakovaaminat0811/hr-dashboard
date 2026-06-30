@@ -26,7 +26,12 @@ const row=(label,start=0)=>{
   return main[index];
 };
 const sectionRow=(section,label)=>{
-  const sectionIndex=rowIndex(section);
+  const aliases={
+    'Операционная эффективность':['Операционная эффективность','Эффективность'],
+    'ФОТ распределению персонала':['ФОТ распределению персонала','ФОТ по распределению персонала']
+  };
+  const names=aliases[section]||[section];
+  const sectionIndex=names.map(name=>rowIndex(name)).find(index=>index>=0)??-1;
   if(sectionIndex<0) throw new Error('Missing section '+section);
   return row(label,sectionIndex+1);
 };
