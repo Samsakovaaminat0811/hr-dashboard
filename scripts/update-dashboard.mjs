@@ -32,6 +32,10 @@ const sectionRow=(section,label)=>{
   };
   const names=aliases[section]||[section];
   const sectionIndex=names.map(name=>rowIndex(name)).find(index=>index>=0)??-1;
+  if(sectionIndex<0&&section==='Операционная эффективность'){
+    const fallbackIndex=main.reduce((found,item,index)=>(item[0]||'').trim()===label?index:found,-1);
+    if(fallbackIndex>=0) return main[fallbackIndex];
+  }
   if(sectionIndex<0) throw new Error('Missing section '+section);
   return row(label,sectionIndex+1);
 };
