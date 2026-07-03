@@ -6,6 +6,7 @@ on:
   push:
     paths:
       - '.github/workflows/update-data.yml'
+      - 'scripts/update-dashboard.mjs'
 permissions:
   contents: write
 jobs:
