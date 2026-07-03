@@ -7,6 +7,7 @@ on:
     paths:
       - '.github/workflows/update-data.yml'
       - 'scripts/update-dashboard.mjs'
+      - 'index.html'
 permissions:
   contents: write
 jobs:
