@@ -3,6 +3,9 @@ on:
   schedule:
     - cron: '17 * * * *'
   workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/update-data.yml'
 permissions:
   contents: write
 jobs:
@@ -16,7 +19,7 @@ jobs:
       - name: Recalculate safe aggregates
         env:
           MAIN_SHEET_ID: ${{ secrets.MAIN_SHEET_ID }}
-          PEOPLE_SHEET_ID: ${{ secrets.PEOPLE_SHEET_ID }}
+          PEOPLE_SHEET_ID: 1hGYvP_SocPlj5aF8knqjsGz_TXewpjnUdLZd1KmEae0
         run: node scripts/update-dashboard.mjs
       - name: Publish changed data
         run: |
