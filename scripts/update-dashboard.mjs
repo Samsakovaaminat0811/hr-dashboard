@@ -158,8 +158,26 @@ const normalizeCategory = (value) => {
   return map[key] || value.trim();
 };
 
+const normalizeContract = (value) => {
+  const key = (value || 'Не указано').trim().toLowerCase().replace(/\s+/g, ' ');
+  const map = {
+    'тд': 'ТД',
+    'т/д': 'ТД',
+    'трудовой договор': 'ТД',
+    'б/д': 'Б/Д',
+    'бд': 'Б/Д',
+    'без договора': 'Б/Д',
+    'сезон': 'Сезон',
+    'сезонный': 'Сезон',
+    'ка': 'КА',
+    'ип': 'ИП',
+    'не указано': 'Не указано',
+  };
+  return map[key] || value.trim();
+};
+
 for (const cells of peopleRows) {
-  const gender = (cells[6] || '').toLowerCase();
+  const gender = (cells[8] || '').toLowerCase();
   if (gender === 'м') male++;
   else if (gender === 'ж') female++;
 
@@ -173,11 +191,10 @@ for (const cells of peopleRows) {
   }
   processes[process] = (processes[process] || 0) + 1;
 
-  let contract = (cells[12] || 'Не указано').trim();
-  if (contract.toLowerCase() === 'сезон') contract = 'Сезон';
+  const contract = normalizeContract(cells[15]);
   contracts[contract] = (contracts[contract] || 0) + 1;
 
-  const birth = (cells[8] || '').match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+  const birth = (cells[10] || '').match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
   if (birth) {
     let age = ref.getFullYear() - Number(birth[3]);
     const month = Number(birth[2]) - 1;
@@ -186,7 +203,7 @@ for (const cells of peopleRows) {
     if (age >= 14 && age <= 90) ages.push(age);
   }
 
-  const years = num(cells[11]);
+  const years = num(cells[13]);
   if (years != null && years >= 0 && years <= 60) {
     tenureCount++;
     if (years < 1) ten['0–1 год']++;
