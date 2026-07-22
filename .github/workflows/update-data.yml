@@ -32,7 +32,7 @@ jobs:
           HR_FTP_PASSWORD: ${{ secrets.HR_FTP_PASSWORD }}
         run: |
           {
-            printf "<?php\nreturn <<'JS'\n"
+            printf "<?php\nreturn <<<'JS'\n"
             cat data.js
             printf "\nJS;\n"
           } > data.payload.php
