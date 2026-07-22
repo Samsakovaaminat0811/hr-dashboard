@@ -182,8 +182,13 @@ const ensureMetricMonth = (series, index, fill = null) => {
   while (series[0].length <= index) series[0].push(fill);
   while (series[1].length <= index) series[1].push(fill);
 };
-for (const key of ['hc', 'hi', 'ex', 'tu', 'hires', 'fillRate']) ensureMetricMonth(metrics[key], latestRoster.index);
+const snilsMovementStartMonth = 7; // August, zero-based.
+const movementRosters = rosters.filter(({index}) => index >= snilsMovementStartMonth);
+if (movementRosters.length) {
+  for (const key of ['hc', 'hi', 'ex', 'tu', 'hires', 'fillRate']) ensureMetricMonth(metrics[key], latestRoster.index);
+}
 for (const roster of rosters) {
+  if (roster.index < snilsMovementStartMonth) continue;
   const previous = rosters.find((item) => item.index === roster.index - 1);
   metrics.hc[1][roster.index] = roster.rows.length;
   metrics.fillRate[1][roster.index] = metrics.plan[1][roster.index] ? Number((roster.rows.length / metrics.plan[1][roster.index] * 100).toFixed(1)) : null;
@@ -314,8 +319,9 @@ const people = {
   tenure: Object.entries(ten),
 };
 
-// The current workforce register is the single source of truth for actual headcount.
-metrics.hc[1][metrics.hc[1].length - 1] = people.count;
+if (latestRoster.index >= snilsMovementStartMonth) {
+  metrics.hc[1][latestRoster.index] = people.count;
+}
 
 const currentText = await readFile('data.js', 'utf8');
 const current = JSON.parse(currentText.replace(/^window\.HR_DATA=/, '').replace(/;\s*$/, ''));
