@@ -48,6 +48,11 @@ export const getSheetTitleById = async (spreadsheetId, sheetId) => {
   return sheet.properties.title;
 };
 
+export const getSheetTitles = async (spreadsheetId) => {
+  const data = await api(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=sheets.properties.title`);
+  return (data.sheets || []).map(({properties}) => properties.title);
+};
+
 export const getSheetValues = async (spreadsheetId, sheetName) => {
   const range = encodeURIComponent(`${sheetName}!A:ZZ`);
   const data = await api(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}?valueRenderOption=FORMATTED_VALUE`);

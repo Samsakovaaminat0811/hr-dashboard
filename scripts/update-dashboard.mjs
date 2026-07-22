@@ -1,5 +1,5 @@
 import {readFile, writeFile} from 'node:fs/promises';
-import {getSheetTitleById, getSheetValues} from './google-sheets.mjs';
+import {getSheetTitleById, getSheetTitles, getSheetValues} from './google-sheets.mjs';
 
 const mainId = process.env.MAIN_SHEET_ID;
 const peopleId = process.env.PEOPLE_SHEET_ID;
@@ -113,9 +113,12 @@ const payrollDistribution = [
 
 const monthNumber = Number(new Intl.DateTimeFormat('en', {timeZone: 'Europe/Moscow', month: 'numeric'}).format(new Date()));
 const monthNames = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
-const peopleSheet = `списочная численность_${monthNames[monthNumber - 1]}`;
-const peopleValues = await getSheetValues(peopleId, peopleSheet);
-const peopleHeaders = peopleValues[0] || [];
+const peopleSheetPrefix = 'списочная численность_';
+const peopleSheetTitles = new Set(await getSheetTitles(peopleId));
+const rosterMonths = monthNames
+  .map((month, index) => ({index, title: `${peopleSheetPrefix}${month}`}))
+  .filter(({index, title}) => index < monthNumber && peopleSheetTitles.has(title));
+if (!rosterMonths.length) throw new Error(`Missing workforce worksheets with prefix ${peopleSheetPrefix}`);
 
 const normalizeHeader = (value) => String(value || '')
   .toLowerCase()
@@ -123,28 +126,85 @@ const normalizeHeader = (value) => String(value || '')
   .replace(/[^a-zа-я0-9]+/gu, ' ')
   .trim();
 
-const findPeopleColumn = (field, aliases) => {
+const findPeopleColumn = (field, aliases, headers) => {
   const wanted = aliases.map(normalizeHeader);
-  const headers = peopleHeaders.map(normalizeHeader);
-  const index = headers.findIndex((header) => wanted.some((alias) => header === alias || header.includes(alias)));
+  const normalizedHeaders = headers.map(normalizeHeader);
+  const index = normalizedHeaders.findIndex((header) => wanted.some((alias) => header === alias || header.includes(alias)));
   if (index < 0) {
-    throw new Error(`Missing workforce column ${field}; headers: ${peopleHeaders.filter(Boolean).join(' | ')}`);
+    throw new Error(`Missing workforce column ${field}; headers: ${headers.filter(Boolean).join(' | ')}`);
   }
   return index;
 };
 
-const peopleColumns = {
-  process: findPeopleColumn('process', ['процесс', 'процесс/функция', 'подразделение']),
-  category: findPeopleColumn('category', ['категория', 'категория персонала']),
-  gender: findPeopleColumn('gender', ['пол']),
-  birthDate: findPeopleColumn('birthDate', ['дата рождения', 'др', 'день рождения']),
-  tenureYears: findPeopleColumn('tenureYears', ['стаж', 'стаж лет', 'стаж работы', 'количество лет']),
-  contractType: findPeopleColumn('contractType', ['тип договора', 'вид договора', 'договор', 'форма оформления']),
+const getPeopleColumns = (headers) => ({
+  snils: findPeopleColumn('snils', ['снилс', 'снилс сотрудника', 'страховой номер'], headers),
+  process: findPeopleColumn('process', ['процесс', 'процесс/функция', 'подразделение'], headers),
+  category: findPeopleColumn('category', ['категория', 'категория персонала'], headers),
+  gender: findPeopleColumn('gender', ['пол'], headers),
+  birthDate: findPeopleColumn('birthDate', ['дата рождения', 'др', 'день рождения'], headers),
+  tenureYears: findPeopleColumn('tenureYears', ['стаж', 'стаж лет', 'стаж работы', 'количество лет'], headers),
+  contractType: findPeopleColumn('contractType', ['тип договора', 'вид договора', 'договор', 'форма оформления'], headers),
+});
+
+const normalizeSnils = (value) => String(value || '').replace(/\D/g, '');
+const buildRoster = (values, sheetTitle) => {
+  const headers = values[0] || [];
+  const columns = getPeopleColumns(headers);
+  const rows = values.slice(1).filter((cells) =>
+    cells[columns.process] || cells[columns.category] || cells[columns.gender] || cells[columns.snils]
+  );
+  const bySnils = new Map();
+  let missingSnils = 0;
+  for (const cells of rows) {
+    const snils = normalizeSnils(cells[columns.snils]);
+    if (!snils) {
+      missingSnils++;
+      continue;
+    }
+    bySnils.set(snils, cells);
+  }
+  if (missingSnils) throw new Error(`${sheetTitle}: ${missingSnils} workforce rows are missing SNILS`);
+  return {columns, rows, bySnils};
 };
 
-const peopleRows = peopleValues.slice(1).filter((cells) =>
-  cells[peopleColumns.process] || cells[peopleColumns.category] || cells[peopleColumns.gender]
-);
+const rosters = [];
+for (const month of rosterMonths) {
+  const values = await getSheetValues(peopleId, month.title);
+  rosters.push({...month, ...buildRoster(values, month.title)});
+}
+
+const latestRoster = rosters.at(-1);
+const peopleSheet = latestRoster.title;
+const peopleColumns = latestRoster.columns;
+const peopleRows = latestRoster.rows;
+
+const ensureMetricMonth = (series, index, fill = null) => {
+  while (series[0].length <= index) series[0].push(fill);
+  while (series[1].length <= index) series[1].push(fill);
+};
+for (const key of ['hc', 'hi', 'ex', 'tu', 'hires', 'fillRate']) ensureMetricMonth(metrics[key], latestRoster.index);
+for (const roster of rosters) {
+  const previous = rosters.find((item) => item.index === roster.index - 1);
+  metrics.hc[1][roster.index] = roster.rows.length;
+  metrics.fillRate[1][roster.index] = metrics.plan[1][roster.index] ? Number((roster.rows.length / metrics.plan[1][roster.index] * 100).toFixed(1)) : null;
+  if (!metrics.avgHc) metrics.avgHc = [Array(metrics.hc[0].length).fill(null), Array(metrics.hc[1].length).fill(null)];
+  ensureMetricMonth(metrics.avgHc, roster.index);
+  metrics.avgHc[1][roster.index] = previous ? (previous.rows.length + roster.rows.length) / 2 : roster.rows.length;
+  if (previous) {
+    let hired = 0;
+    let exited = 0;
+    for (const snils of roster.bySnils.keys()) {
+      if (!previous.bySnils.has(snils)) hired++;
+    }
+    for (const snils of previous.bySnils.keys()) {
+      if (!roster.bySnils.has(snils)) exited++;
+    }
+    metrics.hi[1][roster.index] = hired;
+    metrics.hires[1][roster.index] = hired;
+    metrics.ex[1][roster.index] = exited;
+    metrics.tu[1][roster.index] = metrics.avgHc[1][roster.index] ? Number((exited / metrics.avgHc[1][roster.index] * 100).toFixed(1)) : null;
+  }
+}
 
 const ref = new Date();
 const ages = [];
