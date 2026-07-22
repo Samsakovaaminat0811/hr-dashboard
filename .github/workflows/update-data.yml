@@ -7,9 +7,9 @@ on:
     paths:
       - '.github/workflows/update-data.yml'
       - 'scripts/update-dashboard.mjs'
-      - 'index.html'
+      - 'scripts/google-sheets.mjs'
 permissions:
-  contents: write
+  contents: read
 jobs:
   update:
     runs-on: ubuntu-latest
@@ -18,16 +18,22 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Recalculate safe aggregates
+      - name: Recalculate dashboard aggregates
         env:
           MAIN_SHEET_ID: ${{ secrets.MAIN_SHEET_ID }}
           PEOPLE_SHEET_ID: 1bsbP6d1f8zHCzMIrSsFiXSrxa8EMXn_EX_kJ4oeW6is
+          GOOGLE_SERVICE_ACCOUNT_EMAIL: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_EMAIL }}
+          GOOGLE_PRIVATE_KEY: ${{ secrets.GOOGLE_PRIVATE_KEY }}
         run: node scripts/update-dashboard.mjs
-      - name: Publish changed data
+      - name: Publish protected data to the HR hub
+        env:
+          HR_FTP_HOST: ${{ secrets.HR_FTP_HOST }}
+          HR_FTP_USER: ${{ secrets.HR_FTP_USER }}
+          HR_FTP_PASSWORD: ${{ secrets.HR_FTP_PASSWORD }}
         run: |
-          if git diff --quiet -- data.js; then exit 0; fi
-          git config user.name "hr-dashboard-bot"
-          git config user.email "actions@users.noreply.github.com"
-          git add data.js
-          git commit -m "Обновить HR-данные"
-          git push
+          {
+            printf "<?php\nreturn <<'JS'\n"
+            cat data.js
+            printf "\nJS;\n"
+          } > data.payload.php
+          curl --fail --silent --show-error --user "$HR_FTP_USER:$HR_FTP_PASSWORD" --upload-file data.payload.php "ftp://$HR_FTP_HOST/data.payload.php"

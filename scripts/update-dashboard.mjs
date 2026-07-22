@@ -1,27 +1,9 @@
 import {readFile, writeFile} from 'node:fs/promises';
+import {getSheetTitleById, getSheetValues} from './google-sheets.mjs';
 
 const mainId = process.env.MAIN_SHEET_ID;
 const peopleId = process.env.PEOPLE_SHEET_ID;
 if (!mainId || !peopleId) throw new Error('Sheet IDs are not configured');
-
-const get = async (id, source) => {
-  const selector = /^\d+$/.test(String(source)) ? `gid=${source}` : `sheet=${encodeURIComponent(source)}`;
-  const url = `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:html&${selector}`;
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`Google Sheets ${response.status} for ${source}`);
-  return response.text();
-};
-
-const decode = (value) => value
-  .replace(/<[^>]+>/g, '')
-  .replace(/&nbsp;|&#160;/g, ' ')
-  .replace(/&amp;/g, '&')
-  .replace(/&quot;/g, '"')
-  .replace(/&#39;/g, "'")
-  .trim();
-
-const table = (html) => [...html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)]
-  .map((row) => [...row[1].matchAll(/<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi)].map((cell) => decode(cell[1])));
 
 const num = (value) => {
   if (value == null || value === '' || String(value).startsWith('#')) return null;
@@ -29,7 +11,8 @@ const num = (value) => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
-const main = table(await get(mainId, '1251070794'));
+const mainSheet = await getSheetTitleById(mainId, 1251070794);
+const main = await getSheetValues(mainId, mainSheet);
 const row = (label) => {
   const found = main.find((cells) => (cells[0] || '').trim() === label);
   if (!found) throw new Error(`Missing metric ${label}`);
@@ -131,7 +114,7 @@ const payrollDistribution = [
 const monthNumber = Number(new Intl.DateTimeFormat('en', {timeZone: 'Europe/Moscow', month: 'numeric'}).format(new Date()));
 const monthNames = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
 const peopleSheet = `списочная численность_${monthNames[monthNumber - 1]}`;
-const peopleRows = table(await get(peopleId, peopleSheet)).slice(1).filter((cells) => cells[0] || cells[3]);
+const peopleRows = (await getSheetValues(peopleId, peopleSheet)).slice(1).filter((cells) => cells[0] || cells[3]);
 
 const ref = new Date();
 const ages = [];
@@ -240,6 +223,9 @@ const people = {
   contractTypes: sorted(contracts),
   tenure: Object.entries(ten),
 };
+
+// The current workforce register is the single source of truth for actual headcount.
+metrics.hc[1][metrics.hc[1].length - 1] = people.count;
 
 const currentText = await readFile('data.js', 'utf8');
 const current = JSON.parse(currentText.replace(/^window\.HR_DATA=/, '').replace(/;\s*$/, ''));
