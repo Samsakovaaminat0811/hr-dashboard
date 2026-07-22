@@ -126,6 +126,15 @@ let male = 0;
 let female = 0;
 let tenureCount = 0;
 
+const peopleColumns = {
+  process: 1,
+  category: 2,
+  gender: 9,
+  birthDate: 11,
+  tenureYears: 14,
+  contractType: 16,
+};
+
 const normalizeCategory = (value) => {
   const key = (value || 'Не указано').trim().toLowerCase();
   const map = {
@@ -160,24 +169,24 @@ const normalizeContract = (value) => {
 };
 
 for (const cells of peopleRows) {
-  const gender = (cells[8] || '').toLowerCase();
+  const gender = (cells[peopleColumns.gender] || '').toLowerCase();
   if (gender === 'м') male++;
   else if (gender === 'ж') female++;
 
-  const category = normalizeCategory(cells[2]);
+  const category = normalizeCategory(cells[peopleColumns.category]);
   cats[category] = (cats[category] || 0) + 1;
 
-  let process = (cells[1] || 'Не указано').trim();
+  let process = (cells[peopleColumns.process] || 'Не указано').trim();
   const processKey = process.toLowerCase().replace(/\s+/g, ' ');
   if (processKey === 'склад' || processKey.startsWith('складскладской учет и хранение') || processKey.startsWith('складской учет и хранение')) {
     process = 'Складской учет и хранение (сырье и упаковка)';
   }
   processes[process] = (processes[process] || 0) + 1;
 
-  const contract = normalizeContract(cells[15]);
+  const contract = normalizeContract(cells[peopleColumns.contractType]);
   contracts[contract] = (contracts[contract] || 0) + 1;
 
-  const birth = (cells[10] || '').match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+  const birth = (cells[peopleColumns.birthDate] || '').match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
   if (birth) {
     let age = ref.getFullYear() - Number(birth[3]);
     const month = Number(birth[2]) - 1;
@@ -186,7 +195,7 @@ for (const cells of peopleRows) {
     if (age >= 14 && age <= 90) ages.push(age);
   }
 
-  const years = num(cells[13]);
+  const years = num(cells[peopleColumns.tenureYears]);
   if (years != null && years >= 0 && years <= 60) {
     tenureCount++;
     if (years < 1) ten['0–1 год']++;
