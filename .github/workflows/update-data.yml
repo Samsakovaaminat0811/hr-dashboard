@@ -27,9 +27,9 @@ jobs:
         run: node scripts/update-dashboard.mjs
       - name: Publish changed data through GitHub Pages
         run: |
-          if git diff --quiet -- data.js; then exit 0; fi
+          if git diff --quiet -- data.js people-data.js; then exit 0; fi
           git config user.name "hr-dashboard-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data.js
+          git add data.js people-data.js
           git commit -m "Update HR dashboard data"
           git push

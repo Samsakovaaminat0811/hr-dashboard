@@ -146,6 +146,7 @@ if (!rosterMonths.length) {
   };
   const output = `window.HR_DATA=${JSON.stringify(next)};\n`;
   await writeFile('data.js', output, 'utf8');
+  await writeFile('people-data.js', 'window.HR_PEOPLE_DATA=null;\n', 'utf8');
   console.log(JSON.stringify({
     updatedAt: next.updatedAt,
     months: count,
@@ -340,6 +341,8 @@ for (const age of ages) {
 
 const sorted = (value) => Object.entries(value).sort((a, b) => b[1] - a[1]);
 const people = {
+  updatedAt: new Date().toISOString(),
+  sourceSheet: peopleSheet,
   count: peopleRows.length,
   male,
   female,
@@ -373,9 +376,12 @@ const next = {
 
 const output = `window.HR_DATA=${JSON.stringify(next)};\n`;
 await writeFile('data.js', output, 'utf8');
+await writeFile('people-data.js', `window.HR_PEOPLE_DATA=${JSON.stringify(people)};\n`, 'utf8');
 console.log(JSON.stringify({
   updatedAt: next.updatedAt,
   months: count,
+  people: people.count,
+  peopleSource: people.sourceSheet,
   june: {
     pay2026: next.metrics.pay[1][5],
     revenue2026: next.metrics.rev[1][5],
