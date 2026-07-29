@@ -135,13 +135,10 @@ const rosterMonths = monthNames
 if (!rosterMonths.length) {
   const currentText = await readFile('data.js', 'utf8');
   const current = JSON.parse(currentText.replace(/^window\.HR_DATA=/, '').replace(/;\s*$/, ''));
-  const latestHeadcount = metrics.hc[1].at(-1);
-  const people = current.people ? {...current.people, count: latestHeadcount} : {count: latestHeadcount};
   const next = {
     ...current,
     updatedAt: new Date().toISOString(),
     metrics,
-    people,
     efficiency,
     distribution,
     payrollDistribution,
@@ -151,7 +148,6 @@ if (!rosterMonths.length) {
   console.log(JSON.stringify({
     updatedAt: next.updatedAt,
     months: count,
-    people: next.people.count,
     workforceSheets: 0,
     bytes: output.length,
   }, null, 2));
