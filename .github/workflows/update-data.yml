@@ -42,7 +42,7 @@ jobs:
           server: ${{ secrets.HR_FTP_HOST }}
           username: ${{ secrets.HR_FTP_USER }}
           password: ${{ secrets.HR_FTP_PASSWORD }}
-          protocol: ftps
+          protocol: ftp
           local-dir: ./.deploy/hr/
           server-dir: /hr/
           state-name: .hr-dashboard-deploy-state.json
