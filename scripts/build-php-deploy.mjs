@@ -18,16 +18,36 @@ const serverIndex = [
   index.slice(loaderEndIndex + loaderBoundary.length),
 ].join('');
 
-const phpPayload = (javascript) =>
-  `<?php\nreturn <<<'JS'\n${javascript.trim()}\nJS;\n`;
+const phpEndpoint = (fileName) => `<?php
+require __DIR__ . '/bootstrap.php';
+require_login();
+header('Content-Type: application/javascript; charset=utf-8');
+header('Cache-Control: no-store');
+readfile(__DIR__ . '/${fileName}');
+`;
+const accessRules = `DirectoryIndex index.php
+Options -Indexes
+<FilesMatch "^(config\\.php|bootstrap\\.php|.*\\.payload\\.php|data\\.js|people-data\\.js)$">
+  Require all denied
+</FilesMatch>
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set Referrer-Policy "same-origin"
+</IfModule>
+`;
 
 await mkdir(outputDir, {recursive: true});
+const [data, peopleData] = await Promise.all([
+  readFile('data.js', 'utf8'),
+  readFile('people-data.js', 'utf8'),
+]);
 await Promise.all([
   writeFile(`${outputDir}/index.html`, serverIndex, 'utf8'),
-  readFile('data.js', 'utf8').then((value) =>
-    writeFile(`${outputDir}/data.payload.php`, phpPayload(value), 'utf8')),
-  readFile('people-data.js', 'utf8').then((value) =>
-    writeFile(`${outputDir}/people-data.payload.php`, phpPayload(value), 'utf8')),
+  writeFile(`${outputDir}/data.js`, data, 'utf8'),
+  writeFile(`${outputDir}/people-data.js`, peopleData, 'utf8'),
+  writeFile(`${outputDir}/data.php`, phpEndpoint('data.js'), 'utf8'),
+  writeFile(`${outputDir}/people-data.php`, phpEndpoint('people-data.js'), 'utf8'),
+  writeFile(`${outputDir}/.htaccess`, accessRules, 'utf8'),
 ]);
 
 console.log(`Built protected HR deployment in ${outputDir}`);
