@@ -114,10 +114,13 @@ const payrollDistribution = [
 const monthNumber = Number(new Intl.DateTimeFormat('en', {timeZone: 'Europe/Moscow', month: 'numeric'}).format(new Date()));
 const monthNames = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
 const peopleSheetPrefix = 'списочная численность_';
-const peopleSheetTitles = new Set(await getSheetTitles(peopleId));
+const normalizeSheetTitle = (value) => String(value || '').toLowerCase().replace(/ё/g, 'е').trim();
+const peopleSheetTitleByNormalized = new Map(
+  (await getSheetTitles(peopleId)).map((title) => [normalizeSheetTitle(title), title])
+);
 const rosterMonths = monthNames
-  .map((month, index) => ({index, title: `${peopleSheetPrefix}${month}`}))
-  .filter(({index, title}) => index < monthNumber && peopleSheetTitles.has(title));
+  .map((month, index) => ({index, title: peopleSheetTitleByNormalized.get(normalizeSheetTitle(`${peopleSheetPrefix}${month}`))}))
+  .filter(({index, title}) => index < monthNumber && title);
 if (!rosterMonths.length) throw new Error(`Missing workforce worksheets with prefix ${peopleSheetPrefix}`);
 
 const normalizeHeader = (value) => String(value || '')
