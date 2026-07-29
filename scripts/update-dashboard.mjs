@@ -366,6 +366,7 @@ const next = {
   ...currentWithoutPeople,
   updatedAt: new Date().toISOString(),
   metrics,
+  people,
   efficiency,
   distribution,
   payrollDistribution,
