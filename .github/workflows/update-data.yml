@@ -8,6 +8,7 @@ on:
       - '.github/workflows/update-data.yml'
       - 'scripts/update-dashboard.mjs'
       - 'scripts/google-sheets.mjs'
+      - 'scripts/build-php-deploy.mjs'
 permissions:
   contents: write
 jobs:
@@ -33,3 +34,15 @@ jobs:
           git add data.js people-data.js
           git commit -m "Update HR dashboard data"
           git push
+      - name: Build protected hub deployment
+        run: node scripts/build-php-deploy.mjs
+      - name: Publish current data to hub.rodanika.ru
+        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
+        with:
+          server: ${{ secrets.HR_FTP_HOST }}
+          username: ${{ secrets.HR_FTP_USER }}
+          password: ${{ secrets.HR_FTP_PASSWORD }}
+          protocol: ftps
+          local-dir: ./.deploy/hr/
+          server-dir: /hr/
+          state-name: .hr-dashboard-deploy-state.json
