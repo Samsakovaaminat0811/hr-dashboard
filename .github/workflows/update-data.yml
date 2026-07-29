@@ -21,7 +21,7 @@ jobs:
       - name: Recalculate dashboard aggregates
         env:
           MAIN_SHEET_ID: ${{ secrets.MAIN_SHEET_ID }}
-          PEOPLE_SHEET_ID: ${{ secrets.PEOPLE_SHEET_ID }}
+          PEOPLE_SHEET_ID: ${{ secrets.PEOPLE_SHEET_ID || '1bsbP6d1f8zHCzMIrSsFiXSrxa8EMXn_EX_kJ4oeW6is' }}
           GOOGLE_SERVICE_ACCOUNT_EMAIL: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_EMAIL }}
           GOOGLE_PRIVATE_KEY: ${{ secrets.GOOGLE_PRIVATE_KEY }}
         run: node scripts/update-dashboard.mjs
