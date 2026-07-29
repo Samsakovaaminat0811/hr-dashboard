@@ -135,8 +135,9 @@ const rosterMonths = monthNames
 if (!rosterMonths.length) {
   const currentText = await readFile('data.js', 'utf8');
   const current = JSON.parse(currentText.replace(/^window\.HR_DATA=/, '').replace(/;\s*$/, ''));
+  const {people: _people, ...currentWithoutPeople} = current;
   const next = {
-    ...current,
+    ...currentWithoutPeople,
     updatedAt: new Date().toISOString(),
     metrics,
     efficiency,
@@ -359,12 +360,12 @@ if (latestRoster.index >= snilsMovementStartMonth) {
 
 const currentText = await readFile('data.js', 'utf8');
 const current = JSON.parse(currentText.replace(/^window\.HR_DATA=/, '').replace(/;\s*$/, ''));
+const {people: _people, ...currentWithoutPeople} = current;
 
 const next = {
-  ...current,
+  ...currentWithoutPeople,
   updatedAt: new Date().toISOString(),
   metrics,
-  people,
   efficiency,
   distribution,
   payrollDistribution,
@@ -375,7 +376,6 @@ await writeFile('data.js', output, 'utf8');
 console.log(JSON.stringify({
   updatedAt: next.updatedAt,
   months: count,
-  people: next.people.count,
   june: {
     pay2026: next.metrics.pay[1][5],
     revenue2026: next.metrics.rev[1][5],
