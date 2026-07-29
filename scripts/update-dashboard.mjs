@@ -2,8 +2,8 @@ import {readFile, writeFile} from 'node:fs/promises';
 import {getSheetTitleById, getSheetTitles, getSheetValues} from './google-sheets.mjs';
 
 const mainId = process.env.MAIN_SHEET_ID;
-const peopleId = process.env.PEOPLE_SHEET_ID;
-if (!mainId || !peopleId) throw new Error('Sheet IDs are not configured');
+if (!mainId) throw new Error('MAIN_SHEET_ID is not configured');
+const peopleId = process.env.PEOPLE_SHEET_ID || mainId;
 
 const num = (value) => {
   if (value == null || value === '' || String(value).startsWith('#')) return null;
