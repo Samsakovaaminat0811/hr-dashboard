@@ -11,8 +11,19 @@ const num = (value) => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
-const mainSheet = await getSheetTitleById(mainId, 1251070794);
-const main = await getSheetValues(mainId, mainSheet);
+const findMainSheet = async () => {
+  const titles = await getSheetTitles(mainId);
+  const legacyTitle = await getSheetTitleById(mainId, 1251070794);
+  const preferred = titles.filter((title) => /(^|[\s_-])(бл|bl)([\s_-]|$)|данн|dashboard|дашборд/i.test(title));
+  const candidates = [...new Set([...preferred, legacyTitle, ...titles])];
+  for (const title of candidates) {
+    const values = await getSheetValues(mainId, title);
+    if (values.some((cells) => (cells[0] || '').trim() === 'Численность')) return {title, values};
+  }
+  throw new Error('Missing main worksheet with metric Численность');
+};
+
+const {title: mainSheet, values: main} = await findMainSheet();
 const row = (label) => {
   const found = main.find((cells) => (cells[0] || '').trim() === label);
   if (!found) throw new Error(`Missing metric ${label}`);
