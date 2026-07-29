@@ -9,6 +9,8 @@ on:
       - 'scripts/update-dashboard.mjs'
       - 'scripts/google-sheets.mjs'
       - 'scripts/build-php-deploy.mjs'
+      - 'scripts/publish-db.mjs'
+      - 'server/**'
 permissions:
   contents: write
 jobs:
@@ -36,6 +38,8 @@ jobs:
           git push
       - name: Build protected hub deployment
         run: node scripts/build-php-deploy.mjs
+      - name: Validate server endpoints
+        run: php -l .deploy/hr/data.php && php -l .deploy/hr/people-data.php && php -l .deploy/hr/ingest.php
       - name: Publish current data to hub.rodanika.ru
         uses: SamKirkland/FTP-Deploy-Action@v4.4.0
         with:
@@ -46,3 +50,8 @@ jobs:
           local-dir: ./.deploy/hr/
           server-dir: /
           state-name: .hr-dashboard-deploy-state.json
+      - name: Store current data in the shared database
+        env:
+          HR_INGEST_URL: https://hub.rodanika.ru/hr/ingest.php
+          HR_INGEST_TOKEN: ${{ secrets.HR_INGEST_TOKEN }}
+        run: node scripts/publish-db.mjs

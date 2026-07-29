@@ -1,4 +1,4 @@
-import {mkdir, readFile, writeFile} from 'node:fs/promises';
+import {copyFile, mkdir, readFile, writeFile} from 'node:fs/promises';
 
 const outputDir = '.deploy/hr';
 const loaderStart = '<script>var dataVersion=Date.now();';
@@ -18,13 +18,6 @@ const serverIndex = [
   index.slice(loaderEndIndex + loaderBoundary.length),
 ].join('');
 
-const phpEndpoint = (fileName) => `<?php
-require __DIR__ . '/bootstrap.php';
-require_login();
-header('Content-Type: application/javascript; charset=utf-8');
-header('Cache-Control: no-store');
-readfile(__DIR__ . '/${fileName}');
-`;
 const accessRules = `DirectoryIndex index.php
 Options -Indexes
 <FilesMatch "^(config\\.php|bootstrap\\.php|.*\\.payload\\.php|data\\.js|people-data\\.js)$">
@@ -45,8 +38,9 @@ await Promise.all([
   writeFile(`${outputDir}/index.html`, serverIndex, 'utf8'),
   writeFile(`${outputDir}/data.js`, data, 'utf8'),
   writeFile(`${outputDir}/people-data.js`, peopleData, 'utf8'),
-  writeFile(`${outputDir}/data.php`, phpEndpoint('data.js'), 'utf8'),
-  writeFile(`${outputDir}/people-data.php`, phpEndpoint('people-data.js'), 'utf8'),
+  copyFile('server/data.php', `${outputDir}/data.php`),
+  copyFile('server/people-data.php', `${outputDir}/people-data.php`),
+  copyFile('server/ingest.php', `${outputDir}/ingest.php`),
   writeFile(`${outputDir}/.htaccess`, accessRules, 'utf8'),
 ]);
 
