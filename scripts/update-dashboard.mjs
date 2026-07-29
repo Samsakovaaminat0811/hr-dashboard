@@ -162,44 +162,41 @@ const normalizeHeader = (value) => String(value || '')
   .replace(/[^a-zа-я0-9]+/gu, ' ')
   .trim();
 
-const findPeopleColumn = (field, aliases, headers) => {
+const findPeopleColumn = (field, aliases, headers, required = true) => {
   const wanted = aliases.map(normalizeHeader);
   const normalizedHeaders = headers.map(normalizeHeader);
   const index = normalizedHeaders.findIndex((header) => wanted.some((alias) => header === alias || header.includes(alias)));
-  if (index < 0) {
+  if (index < 0 && required) {
     throw new Error(`Missing workforce column ${field}; headers: ${headers.filter(Boolean).join(' | ')}`);
   }
   return index;
 };
 
 const getPeopleColumns = (headers) => ({
-  snils: findPeopleColumn('snils', ['снилс', 'снилс сотрудника', 'страховой номер'], headers),
+  snils: findPeopleColumn('snils', ['снилс', 'снилс сотрудника', 'страховой номер'], headers, false),
+  name: findPeopleColumn('name', ['ФИО', 'сотрудник', 'ФИО сотрудника'], headers),
   process: findPeopleColumn('process', ['процесс', 'процесс/функция', 'подразделение'], headers),
-  category: findPeopleColumn('category', ['категория', 'категория персонала'], headers),
+  category: findPeopleColumn('category', ['категория', 'категория персонала', 'разделение для макрофакта'], headers),
   gender: findPeopleColumn('gender', ['пол'], headers),
   birthDate: findPeopleColumn('birthDate', ['дата рождения', 'др', 'день рождения'], headers),
-  tenureYears: findPeopleColumn('tenureYears', ['стаж', 'стаж лет', 'стаж работы', 'количество лет'], headers),
+  tenureYears: findPeopleColumn('tenureYears', ['стаж', 'стаж лет', 'стаж работы', 'количество лет', 'выслуга лет'], headers),
   contractType: findPeopleColumn('contractType', ['тип договора', 'вид договора', 'договор', 'форма оформления'], headers),
 });
 
 const normalizeSnils = (value) => String(value || '').replace(/\D/g, '');
+const normalizePersonKey = (value) => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
 const buildRoster = (values, sheetTitle) => {
   const headers = values[0] || [];
   const columns = getPeopleColumns(headers);
   const rows = values.slice(1).filter((cells) =>
-    cells[columns.process] || cells[columns.category] || cells[columns.gender] || cells[columns.snils]
+    cells[columns.process] || cells[columns.category] || cells[columns.gender] || cells[columns.snils] || cells[columns.name]
   );
   const bySnils = new Map();
-  let missingSnils = 0;
-  for (const cells of rows) {
-    const snils = normalizeSnils(cells[columns.snils]);
-    if (!snils) {
-      missingSnils++;
-      continue;
-    }
-    bySnils.set(snils, cells);
+  for (const [index, cells] of rows.entries()) {
+    const snils = columns.snils >= 0 ? normalizeSnils(cells[columns.snils]) : '';
+    const key = snils || normalizePersonKey(cells[columns.name]) || `row:${index}`;
+    bySnils.set(key, cells);
   }
-  if (missingSnils) throw new Error(`${sheetTitle}: ${missingSnils} workforce rows are missing SNILS`);
   return {columns, rows, bySnils};
 };
 
