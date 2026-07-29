@@ -17,7 +17,7 @@ var copy={overview:['Обзор команды','Главные показате
 var legacyRender=render;
 render=function(i){
   try{legacyRender(i)}catch(e){}
-  var currentFact=P&&i===D.hc[1].length-1?P.count:rv('hc',1,i),currentFactCard=document.querySelector('#mainkpis .kpi');if(currentFactCard)currentFactCard.outerHTML=kpi('ЧИСЛЕННОСТЬ',fmt(currentFact),pd(currentFact,rv('hc',0,i)),'◎');
+  var currentFact=rv('hc',1,i),currentFactCard=document.querySelector('#mainkpis .kpi');if(currentFactCard)currentFactCard.outerHTML=kpi('ЧИСЛЕННОСТЬ',fmt(currentFact),pd(currentFact,rv('hc',0,i)),'◎');
   var hv=rv('hires',1,i),iv=rv('interviews',1,i),cv=rv('candidates',1,i),cr=rv('closeRate',1,i),cost=rv('cost',1,i),financeIndex=i;while(financeIndex>0&&rv('pay',1,financeIndex)==null&&rv('rev',1,financeIndex)==null&&rv('sal',1,financeIndex)==null)financeIndex--;var pay=rv('pay',1,financeIndex),rev=rv('rev',1,financeIndex),sv=rv('sal',1,financeIndex);
   document.querySelector('#hirekpis').innerHTML=kpi('УСПЕШНЫЕ НАЙМЫ',hv==null?'—':hv,pd(hv,rv('hires',0,i)),'+')+kpi('СОБЕСЕДОВАНИЯ',iv==null?'—':iv,pd(iv,rv('interviews',0,i)),'◌')+kpi('СТОИМОСТЬ НАЙМА',cost==null?'—':fmt(cost),pd(cost,rv('cost',0,i)),'₽',true,cost==null?'':' ₽')+kpi('ЗАКРЫТИЕ ВАКАНСИЙ',cr==null?'—':cr.toFixed(1).replace('.',','),pd(cr,rv('closeRate',0,i)),'✓',false,cr==null?'':'%');
   document.querySelector('#funnel-month').textContent=mnames[i]+' 2026';document.querySelector('#funnel-candidates').textContent=cv==null?'—':fmt(cv);document.querySelector('#funnel-interviews').textContent=iv==null?'—':fmt(iv);document.querySelector('#funnel-hires').textContent=hv==null?'—':fmt(hv);var fr=rv('funnel',1,i);document.querySelector('#funnel-rate').textContent=fr==null?'—':fr.toFixed(1).replace('.',',')+'%';

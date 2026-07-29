@@ -121,7 +121,31 @@ const peopleSheetTitleByNormalized = new Map(
 const rosterMonths = monthNames
   .map((month, index) => ({index, title: peopleSheetTitleByNormalized.get(normalizeSheetTitle(`${peopleSheetPrefix}${month}`))}))
   .filter(({index, title}) => index < monthNumber && title);
-if (!rosterMonths.length) throw new Error(`Missing workforce worksheets with prefix ${peopleSheetPrefix}`);
+if (!rosterMonths.length) {
+  const currentText = await readFile('data.js', 'utf8');
+  const current = JSON.parse(currentText.replace(/^window\.HR_DATA=/, '').replace(/;\s*$/, ''));
+  const latestHeadcount = metrics.hc[1].at(-1);
+  const people = current.people ? {...current.people, count: latestHeadcount} : {count: latestHeadcount};
+  const next = {
+    ...current,
+    updatedAt: new Date().toISOString(),
+    metrics,
+    people,
+    efficiency,
+    distribution,
+    payrollDistribution,
+  };
+  const output = `window.HR_DATA=${JSON.stringify(next)};\n`;
+  await writeFile('data.js', output, 'utf8');
+  console.log(JSON.stringify({
+    updatedAt: next.updatedAt,
+    months: count,
+    people: next.people.count,
+    workforceSheets: 0,
+    bytes: output.length,
+  }, null, 2));
+  process.exit(0);
+}
 
 const normalizeHeader = (value) => String(value || '')
   .toLowerCase()
