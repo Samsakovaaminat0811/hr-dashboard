@@ -218,7 +218,7 @@ const ensureMetricMonth = (series, index, fill = null) => {
 const snilsMovementStartMonth = 7; // August, zero-based.
 const movementRosters = rosters.filter(({index}) => index >= snilsMovementStartMonth);
 if (movementRosters.length) {
-  for (const key of ['hc', 'hi', 'ex', 'tu', 'hires', 'fillRate']) ensureMetricMonth(metrics[key], latestRoster.index);
+  for (const key of ['hc', 'ex', 'tu', 'fillRate']) ensureMetricMonth(metrics[key], latestRoster.index);
 }
 for (const roster of rosters) {
   if (roster.index < snilsMovementStartMonth) continue;
@@ -229,16 +229,10 @@ for (const roster of rosters) {
   ensureMetricMonth(metrics.avgHc, roster.index);
   metrics.avgHc[1][roster.index] = previous ? (previous.rows.length + roster.rows.length) / 2 : roster.rows.length;
   if (previous) {
-    let hired = 0;
     let exited = 0;
-    for (const snils of roster.bySnils.keys()) {
-      if (!previous.bySnils.has(snils)) hired++;
-    }
     for (const snils of previous.bySnils.keys()) {
       if (!roster.bySnils.has(snils)) exited++;
     }
-    metrics.hi[1][roster.index] = hired;
-    metrics.hires[1][roster.index] = hired;
     metrics.ex[1][roster.index] = exited;
     metrics.tu[1][roster.index] = metrics.avgHc[1][roster.index] ? Number((exited / metrics.avgHc[1][roster.index] * 100).toFixed(1)) : null;
   }
