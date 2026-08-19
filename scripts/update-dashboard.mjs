@@ -192,12 +192,14 @@ const buildRoster = (values, sheetTitle) => {
     cells[columns.process] || cells[columns.category] || cells[columns.gender] || cells[columns.snils] || cells[columns.name]
   );
   const bySnils = new Map();
+  const snilsSet = new Set();
   for (const [index, cells] of rows.entries()) {
     const snils = columns.snils >= 0 ? normalizeSnils(cells[columns.snils]) : '';
+    if (snils) snilsSet.add(snils);
     const key = snils || normalizePersonKey(cells[columns.name]) || `row:${index}`;
     bySnils.set(key, cells);
   }
-  return {columns, rows, bySnils};
+  return {columns, rows, bySnils, snilsSet};
 };
 
 const rosters = [];
@@ -218,12 +220,14 @@ const ensureMetricMonth = (series, index, fill = null) => {
 const snilsMovementStartMonth = 7; // August, zero-based.
 const movementRosters = rosters.filter(({index}) => index >= snilsMovementStartMonth);
 if (movementRosters.length) {
-  for (const key of ['hc', 'ex', 'tu', 'fillRate']) ensureMetricMonth(metrics[key], latestRoster.index);
+  for (const key of ['hc', 'hi', 'ex', 'tu', 'fillRate']) ensureMetricMonth(metrics[key], latestRoster.index);
 }
 for (const roster of rosters) {
   if (roster.index < snilsMovementStartMonth) continue;
   const previous = rosters.find((item) => item.index === roster.index - 1);
+  const hired = previous ? [...roster.snilsSet].filter((snils) => !previous.snilsSet.has(snils)).length : 0;
   metrics.hc[1][roster.index] = roster.rows.length;
+  metrics.hi[1][roster.index] = hired;
   metrics.fillRate[1][roster.index] = metrics.plan[1][roster.index] ? Number((roster.rows.length / metrics.plan[1][roster.index] * 100).toFixed(1)) : null;
   if (!metrics.avgHc) metrics.avgHc = [Array(metrics.hc[0].length).fill(null), Array(metrics.hc[1].length).fill(null)];
   ensureMetricMonth(metrics.avgHc, roster.index);
